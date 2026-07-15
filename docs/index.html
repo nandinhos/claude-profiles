@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="claude-profiles — um sistema para criar seus proprios harnesses isolados do Claude Code, trocados por CLAUDE_CONFIG_DIR. Com 3 exemplos prontos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<title>claude-profiles — crie seus harnesses isolados do Claude Code</title>
+<style>
+  :root {
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --bg: #F2F3F0;
+    --bg-tint: #EAECE6;
+    --surface: #FBFBF9;
+    --surface-2: #EEEFEB;
+    --ink: #14171D;
+    --ink-soft: #545B66;
+    --ink-faint: #868C96;
+    --line: #E0E1DB;
+    --line-strong: #CED0C8;
+
+    --sys: #335EC4;
+    --sys-soft: rgba(51,94,196,0.10);
+
+    --devorq: #B07C18;
+    --devorq-soft: rgba(176,124,24,0.10);
+    --tall: #CA4137;
+    --tall-soft: rgba(202,65,55,0.10);
+    --lazy: #2F877A;
+    --lazy-soft: rgba(47,135,122,0.10);
+
+    --ok: #2E9A5D;
+
+    --maxw: 64rem;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20,24,30,0.05), 0 10px 34px rgba(20,24,30,0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C0E13; --bg-tint: #10131A; --surface: #14171E; --surface-2: #1B1F27;
+      --ink: #E7E9ED; --ink-soft: #9BA1AC; --ink-faint: #6B717C;
+      --line: #232833; --line-strong: #323947;
+      --sys: #7098F5; --sys-soft: rgba(112,152,245,0.14);
+      --devorq: #E7B04A; --devorq-soft: rgba(231,176,74,0.14);
+      --tall: #EF6B62; --tall-soft: rgba(239,107,98,0.14);
+      --lazy: #5DBBA8; --lazy-soft: rgba(93,187,168,0.14);
+      --ok: #56C287;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 14px 40px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F2F3F0; --bg-tint: #EAECE6; --surface: #FBFBF9; --surface-2: #EEEFEB;
+    --ink: #14171D; --ink-soft: #545B66; --ink-faint: #868C96;
+    --line: #E0E1DB; --line-strong: #CED0C8;
+    --sys: #335EC4; --sys-soft: rgba(51,94,196,0.10);
+    --devorq: #B07C18; --devorq-soft: rgba(176,124,24,0.10);
+    --tall: #CA4137; --tall-soft: rgba(202,65,55,0.10);
+    --lazy: #2F877A; --lazy-soft: rgba(47,135,122,0.10);
+    --ok: #2E9A5D;
+    --shadow: 0 1px 2px rgba(20,24,30,0.05), 0 10px 34px rgba(20,24,30,0.07);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C0E13; --bg-tint: #10131A; --surface: #14171E; --surface-2: #1B1F27;
+    --ink: #E7E9ED; --ink-soft: #9BA1AC; --ink-faint: #6B717C;
+    --line: #232833; --line-strong: #323947;
+    --sys: #7098F5; --sys-soft: rgba(112,152,245,0.14);
+    --devorq: #E7B04A; --devorq-soft: rgba(231,176,74,0.14);
+    --tall: #EF6B62; --tall-soft: rgba(239,107,98,0.14);
+    --lazy: #5DBBA8; --lazy-soft: rgba(93,187,168,0.14);
+    --ok: #56C287;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 14px 40px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  code, .mono { font-family: var(--mono); }
+  a { color: var(--sys); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--sys); outline-offset: 3px; border-radius: 4px; }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0.6rem clamp(1rem, 4vw, 2rem);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .brand { font-family: var(--mono); font-weight: 700; font-size: 0.92rem; letter-spacing: -0.01em; }
+  .topbar .brand .sl { color: var(--ink-faint); }
+  .topbar nav { margin-left: auto; display: flex; align-items: center; gap: 1.1rem; }
+  .topbar nav a { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-soft); text-decoration: none; }
+  .topbar nav a:hover { color: var(--ink); }
+  .ttoggle {
+    display: inline-grid; place-items: center; width: 34px; height: 34px;
+    border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface);
+    color: var(--ink-soft); cursor: pointer; font-size: 15px; line-height: 1;
+  }
+  .ttoggle:hover { color: var(--ink); border-color: var(--sys); }
+  @media (max-width: 560px) { .topbar nav a.hideable { display: none; } }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(1.6rem, 4vw, 3.4rem) clamp(1.1rem, 4vw, 2rem) 4rem; }
+
+  .eyebrow { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 0.9rem; }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; padding: clamp(1rem, 4vw, 2.4rem) 0 clamp(1.5rem, 4vw, 2.6rem); }
+  .hero-grid {
+    position: absolute; inset: -2rem -50vw 0; z-index: -1; pointer-events: none;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(ellipse 60% 70% at 30% 0%, #000 0%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse 60% 70% at 30% 0%, #000 0%, transparent 72%);
+    opacity: 0.6;
+  }
+  .hero h1 {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(2.3rem, 7.2vw, 3.9rem); letter-spacing: -0.025em; line-height: 1.0;
+    margin: 0 0 0.9rem; text-wrap: balance;
+  }
+  .hero h1 .sl { color: var(--ink-faint); }
+  .grad { background: linear-gradient(96deg, var(--devorq), var(--tall) 52%, var(--lazy)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(1.05rem, 2.5vw, 1.3rem); color: var(--ink-soft); max-width: 46ch; margin: 0 0 1.7rem; text-wrap: balance; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; }
+  .btn {
+    font-family: var(--mono); font-size: 0.86rem; font-weight: 700; text-decoration: none;
+    padding: 0.62em 1.05em; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn.primary { background: var(--sys); color: #fff; box-shadow: 0 6px 18px var(--sys-soft); }
+  :root[data-theme="dark"] .btn.primary { color: #0C0E13; }
+  @media (prefers-color-scheme: dark) { .btn.primary { color: #0C0E13; } }
+  .btn.primary:hover { transform: translateY(-2px); }
+  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+  .btn.ghost:hover { border-color: var(--sys); }
+  @media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
+
+  .term {
+    font-family: var(--mono); font-size: 0.85rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; max-width: 34rem; margin-top: 1.9rem;
+  }
+  .term-bar { display: flex; align-items: center; gap: 0.45rem; padding: 0.6rem 0.85rem; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .term-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); display: block; }
+  .term-bar span { margin-left: auto; color: var(--ink-faint); font-size: 0.72rem; letter-spacing: 0.05em; }
+  .term-body { padding: 0.9rem 0.95rem; display: grid; gap: 0.4rem; }
+  .term-body .row { white-space: nowrap; overflow-x: auto; }
+  .term-body .row::-webkit-scrollbar { height: 0; }
+  .prompt { color: var(--ink-faint); }
+  .c-devorq { color: var(--devorq); } .c-tall { color: var(--tall); } .c-lazy { color: var(--lazy); }
+  .cmt { color: var(--ink-faint); }
+
+  /* ---------- section scaffolding ---------- */
+  section { margin-top: clamp(3rem, 7vw, 4.6rem); }
+  .h2 { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 0.4rem; display: flex; align-items: baseline; gap: 0.6rem; }
+  .h2 .num { color: var(--sys); font-size: 0.82rem; font-weight: 700; }
+  .sub { color: var(--ink-soft); margin: 0 0 1.6rem; max-width: 62ch; }
+  .sub code { font-size: 0.85em; background: var(--surface-2); padding: 0.05em 0.35em; border-radius: 5px; }
+
+  /* ---------- mecanismo (SVG) ---------- */
+  .mech { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(1rem, 3vw, 1.8rem) clamp(0.8rem, 3vw, 1.6rem) 1.1rem; margin: 0; }
+  .mech svg { display: block; width: 100%; height: auto; }
+  .mech figcaption { font-size: 0.85rem; color: var(--ink-soft); text-align: center; margin-top: 0.6rem; border-top: 1px dashed var(--line); padding-top: 0.9rem; }
+  .mech figcaption b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- 4 passos ---------- */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; counter-reset: step; }
+  @media (max-width: 820px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .steps { grid-template-columns: 1fr; } }
+  .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.05rem 1.15rem; box-shadow: var(--shadow); }
+  .step .n { font-family: var(--mono); font-weight: 700; font-size: 0.78rem; color: var(--sys); background: var(--sys-soft); width: 1.9em; height: 1.9em; display: inline-grid; place-items: center; border-radius: 7px; margin-bottom: 0.65rem; }
+  .step h3 { font-family: var(--mono); font-size: 0.9rem; margin: 0 0 0.35rem; letter-spacing: -0.01em; }
+  .step p { margin: 0; font-size: 0.83rem; color: var(--ink-soft); }
+  .step p code { font-size: 0.9em; background: var(--surface-2); padding: 0.05em 0.32em; border-radius: 5px; color: var(--ink); }
+  .steps-foot { margin-top: 1.1rem; font-size: 0.88rem; color: var(--ink-soft); }
+
+  /* ---------- cards dos profiles / padrões ---------- */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  @media (max-width: 780px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--hue, var(--sys)); border-radius: var(--radius); padding: 1.15rem 1.15rem 1.25rem; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: transform 0.18s ease, border-color 0.18s ease; }
+  .card.devorq { --hue: var(--devorq); --hue-soft: var(--devorq-soft); }
+  .card.tall { --hue: var(--tall); --hue-soft: var(--tall-soft); }
+  .card.lazy { --hue: var(--lazy); --hue-soft: var(--lazy-soft); }
+  .card:hover { transform: translateY(-3px); border-color: var(--hue); }
+  @media (prefers-reduced-motion: reduce) { .card:hover { transform: none; } }
+  .pattern { font-family: var(--mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hue); background: var(--hue-soft); align-self: flex-start; padding: 0.28em 0.6em; border-radius: 6px; margin-bottom: 0.75rem; }
+  .card .alias { font-family: var(--mono); font-weight: 700; font-size: 1.02rem; color: var(--hue); }
+  .card .dir { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-faint); margin: 0.15rem 0 0.85rem; }
+  .card .role { font-size: 0.9rem; color: var(--ink-soft); margin: 0 0 0.95rem; }
+  .card ul { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 0.4rem; }
+  .card li { font-size: 0.84rem; color: var(--ink); padding-left: 1.05rem; position: relative; }
+  .card li::before { content: "›"; position: absolute; left: 0; color: var(--hue); font-family: var(--mono); font-weight: 700; }
+  .card li code { font-size: 0.8rem; background: var(--surface-2); padding: 0.05em 0.35em; border-radius: 5px; }
+  .card .foot { margin-top: auto; padding-top: 0.7rem; border-top: 1px solid var(--line); }
+  .tag { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.74rem; font-weight: 700; color: var(--hue); background: var(--hue-soft); padding: 0.28em 0.6em; border-radius: 7px; }
+
+  /* ---------- timeline versão ---------- */
+  .verpanel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(1.1rem, 3vw, 1.8rem); }
+  .timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: 1.4rem; }
+  @media (max-width: 620px) { .timeline { grid-template-columns: 1fr; gap: 0.5rem; } }
+  .tl-step { position: relative; padding: 0 0.6rem; }
+  .tl-rail { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.6rem; }
+  .tl-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--line-strong); border: 2px solid var(--surface); flex: none; box-shadow: 0 0 0 1px var(--line-strong); }
+  .tl-line { height: 2px; background: var(--line-strong); flex: 1; }
+  .tl-step.now .tl-dot { background: var(--devorq); box-shadow: 0 0 0 1px var(--devorq), 0 0 0 5px var(--devorq-soft); }
+  .tl-step:last-child .tl-line { visibility: hidden; }
+  @media (max-width: 620px) { .tl-line { display: none; } }
+  .tl-ver { font-family: var(--mono); font-weight: 700; font-size: 1rem; }
+  .tl-step.past .tl-ver { color: var(--ink-faint); }
+  .tl-step.now .tl-ver { color: var(--devorq); }
+  .tl-name { font-size: 0.82rem; color: var(--ink-soft); }
+  .tl-meta { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); margin-top: 0.15rem; }
+  .verfoot { display: flex; flex-wrap: wrap; gap: 0.8rem 1.4rem; align-items: center; border-top: 1px dashed var(--line); padding-top: 1.15rem; }
+  .rename { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-soft); }
+  .rename b { color: var(--ink); }
+  .rename .arw { color: var(--sys); font-weight: 700; }
+  .strike { color: var(--ink-faint); text-decoration: line-through; }
+  .stats { display: flex; gap: 0.5rem; margin-left: auto; }
+  .stat { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; padding: 0.3em 0.6em; border-radius: 7px; background: var(--surface-2); color: var(--ink-soft); }
+  .stat.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+
+  /* ---------- pins ---------- */
+  .pins { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .pins-head { padding: 0.75rem 1.05rem; background: var(--surface-2); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; }
+  .pins-scroll { overflow-x: auto; }
+  table.pintbl { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 460px; }
+  table.pintbl th, table.pintbl td { text-align: left; padding: 0.6rem 1.05rem; border-bottom: 1px solid var(--line); }
+  table.pintbl th { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  table.pintbl tr:last-child td { border-bottom: 0; }
+  table.pintbl td.v { font-family: var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+  table.pintbl td.comp { font-weight: 600; }
+  .live { color: var(--devorq); }
+
+  footer { margin-top: 3.4rem; padding-top: 1.4rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; }
+  footer .lock { color: var(--ok); }
+  footer a { text-decoration: none; color: var(--ink-soft); }
+  footer a:hover { text-decoration: underline; color: var(--ink); }
+
+  /* ---------- motion ---------- */
+  .reveal { opacity: 0; transform: translateY(10px); animation: rise 0.7s cubic-bezier(0.2,0.7,0.2,1) forwards; }
+  .r1 { animation-delay: 0.04s; } .r2 { animation-delay: 0.13s; } .r3 { animation-delay: 0.22s; } .r4 { animation-delay: 0.31s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.9s ease forwards 0.4s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .pop { opacity: 0; animation: pop 0.5s ease forwards; }
+  .pop.p1 { animation-delay: 0.75s; } .pop.p2 { animation-delay: 0.87s; } .pop.p3 { animation-delay: 0.99s; }
+  @keyframes pop { to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .reveal, .draw, .pop { animation: none; opacity: 1; transform: none; stroke-dashoffset: 0; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">claude-profiles<span class="sl">/</span></span>
+  <nav>
+    <a class="hideable" href="#criar">Criar o seu</a>
+    <a class="hideable" href="#exemplos">Exemplos</a>
+    <a href="https://github.com/nandinhos/claude-profiles">GitHub</a>
+    <button class="ttoggle" id="ttoggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero-grid" aria-hidden="true"></div>
+    <p class="eyebrow reveal r1">um harness, muitas personalidades</p>
+    <h1 class="reveal r1">Crie <span class="grad">seus profiles</span><br>do Claude Code<span class="sl">.</span></h1>
+    <p class="lede reveal r2">Um sistema para montar <b>harnesses isolados</b> do Claude Code — cada um com suas skills, plugins, regras e memória — trocados por um alias. No estilo <code>codex --profile</code>. Com três exemplos prontos de brinde.</p>
+    <div class="hero-cta reveal r3">
+      <a class="btn primary" href="#criar">Criar o seu →</a>
+      <a class="btn ghost" href="https://github.com/nandinhos/claude-profiles">Ver no GitHub</a>
+    </div>
+    <div class="term reveal r4">
+      <div class="term-bar"><i></i><i></i><i></i><span>~/projects · zsh</span></div>
+      <div class="term-body">
+        <div class="row"><span class="prompt">$ </span><span class="c-devorq">claude-devorq</span>  <span class="cmt"># metodologia / disciplina</span></div>
+        <div class="row"><span class="prompt">$ </span><span class="c-tall">claude-tall</span>    <span class="cmt"># stack Laravel / TALL</span></div>
+        <div class="row"><span class="prompt">$ </span><span class="c-lazy">claude-lazy</span>    <span class="cmt"># código mínimo</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section aria-labelledby="mech-h">
+    <h2 class="h2" id="mech-h"><span class="num">01</span> Como o isolamento funciona</h2>
+    <p class="sub">O binário do <code>claude</code> é <b>global</b> — atualizá-lo vale para todos. Cada alias injeta <code>CLAUDE_CONFIG_DIR</code> apontando para um diretório de config próprio: skills, plugins, MCP, settings, memória e credenciais totalmente isolados. É o mecanismo inteiro.</p>
+    <figure class="mech">
+      <svg viewBox="0 0 920 320" role="img" aria-label="Diagrama: um binário claude global compartilhado por três profiles isolados via CLAUDE_CONFIG_DIR">
+        <path class="draw" d="M460,86 C460,130 170,120 170,168" style="fill:none;stroke:var(--devorq)" stroke-width="2" pathLength="1"/>
+        <path class="draw" d="M460,86 C460,140 460,140 460,168" style="fill:none;stroke:var(--tall)" stroke-width="2" pathLength="1"/>
+        <path class="draw" d="M460,86 C460,130 750,120 750,168" style="fill:none;stroke:var(--lazy)" stroke-width="2" pathLength="1"/>
+        <text x="470" y="132" style="font-family:var(--mono);fill:var(--ink-faint)" font-size="12">CLAUDE_CONFIG_DIR=…</text>
+        <g class="reveal r1">
+          <rect x="330" y="26" width="260" height="60" rx="12" style="fill:var(--surface-2);stroke:var(--sys)" stroke-width="1.5"/>
+          <text x="460" y="52" text-anchor="middle" font-size="18" style="font-family:var(--mono);font-weight:700;fill:var(--ink)">claude · binário GLOBAL</text>
+          <text x="460" y="72" text-anchor="middle" font-size="12" style="font-family:var(--mono);fill:var(--ink-soft)">~/.local/share/claude/versions/</text>
+        </g>
+        <g class="pop p1">
+          <rect x="40" y="168" width="260" height="120" rx="12" style="fill:var(--devorq-soft);stroke:var(--devorq)" stroke-width="1.5"/>
+          <text x="170" y="200" text-anchor="middle" font-size="16" style="font-family:var(--mono);font-weight:700;fill:var(--devorq)">claude-devorq</text>
+          <text x="170" y="222" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-soft)">~/.claude-profiles/devorq</text>
+          <text x="170" y="252" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-faint)">skills · settings · creds</text>
+          <text x="170" y="270" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-faint)">memória própria</text>
+        </g>
+        <g class="pop p2">
+          <rect x="330" y="168" width="260" height="120" rx="12" style="fill:var(--tall-soft);stroke:var(--tall)" stroke-width="1.5"/>
+          <text x="460" y="200" text-anchor="middle" font-size="16" style="font-family:var(--mono);font-weight:700;fill:var(--tall)">claude-tall</text>
+          <text x="460" y="222" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-soft)">~/.claude-profiles/mwguerra-tall</text>
+          <text x="460" y="252" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-faint)">plugins · MCP</text>
+          <text x="460" y="270" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-faint)">settings</text>
+        </g>
+        <g class="pop p3">
+          <rect x="620" y="168" width="260" height="120" rx="12" style="fill:var(--lazy-soft);stroke:var(--lazy)" stroke-width="1.5"/>
+          <text x="750" y="200" text-anchor="middle" font-size="16" style="font-family:var(--mono);font-weight:700;fill:var(--lazy)">claude-lazy</text>
+          <text x="750" y="222" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-soft)">~/.claude-profiles/ponytail</text>
+          <text x="750" y="252" text-anchor="middle" font-size="11.5" style="font-family:var(--mono);fill:var(--ink-faint)">plugin + hooks</text>
+        </g>
+      </svg>
+      <figcaption>O binário é <b>compartilhado</b>; só a <b>config diverge</b> por profile. Isolamento total, confirmado empiricamente.</figcaption>
+    </figure>
+  </section>
+
+  <section id="criar" aria-labelledby="criar-h">
+    <h2 class="h2" id="criar-h"><span class="num">02</span> Crie o seu, em 4 passos</h2>
+    <p class="sub">Um profile novo é trabalho de dev — mas pequeno e mecânico: uma função bash, um arquivo de identidade e um alias. O <code>setup.sh</code> é idempotente; rode quantas vezes quiser.</p>
+    <div class="steps">
+      <div class="step">
+        <span class="n">1</span>
+        <h3>Identidade</h3>
+        <p>Crie <code>templates/&lt;nome&gt;.CLAUDE.md</code> com as regras e a persona do harness.</p>
+      </div>
+      <div class="step">
+        <span class="n">2</span>
+        <h3>Montagem</h3>
+        <p>No <code>setup.sh</code>, escreva <code>setup_&lt;nome&gt;()</code> com <code>emit_base</code> + <code>add_marketplace</code>/<code>install_plugin</code>, e chame em <code>main</code>.</p>
+      </div>
+      <div class="step">
+        <span class="n">3</span>
+        <h3>Atalho</h3>
+        <p>Em <code>aliases.zsh</code>, adicione o alias na forma-prefixo <code>CLAUDE_CONFIG_DIR=… claude</code>.</p>
+      </div>
+      <div class="step">
+        <span class="n">4</span>
+        <h3>Monte e valide</h3>
+        <p>Rode <code>./setup.sh &amp;&amp; ./verify.sh</code>. Adicione os invariantes do novo profile ao verify.</p>
+      </div>
+    </div>
+    <p class="steps-foot">→ A receita completa, com um <code>setup_&lt;nome&gt;()</code> mínimo que roda, está no <a href="https://github.com/nandinhos/claude-profiles#adicionar-um-novo-harness">README</a>.</p>
+  </section>
+
+  <section id="exemplos" aria-labelledby="ex-h">
+    <h2 class="h2" id="ex-h"><span class="num">03</span> Três exemplos = três padrões</h2>
+    <p class="sub">Cada profile de brinde é também um <b>padrão de fonte</b> que você copia. O tipo de fonte decide o mecanismo — a CLI fica fora do config dir (no PATH); plugins e skills ficam dentro (isolados).</p>
+    <div class="cards">
+
+      <article class="card devorq">
+        <span class="pattern">Padrão · CLI + skills</span>
+        <div class="alias">claude-devorq</div>
+        <div class="dir">~/.claude-profiles/devorq</div>
+        <p class="role">Metodologia e disciplina de engenharia.</p>
+        <ul>
+          <li>CLI bash <code>nandinhos/devorq</code> no PATH</li>
+          <li>Gates G0→G7, scope-guard, lições</li>
+          <li>9 skills copiadas para o config dir</li>
+          <li>commit-hook baniu <code>Co-Authored-By</code></li>
+        </ul>
+        <div class="foot"><span class="tag">v4.1.0 · atual</span></div>
+      </article>
+
+      <article class="card tall">
+        <span class="pattern">Padrão · marketplace</span>
+        <div class="alias">claude-tall</div>
+        <div class="dir">~/.claude-profiles/mwguerra-tall</div>
+        <p class="role">Stack Laravel / TALL de ponta a ponta.</p>
+        <ul>
+          <li>Marketplace <code>mwguerra</code> + plugins</li>
+          <li>Filament v5 · Pest · Reverb · Docker</li>
+          <li><code>laravel@mwguerra-plugins</code></li>
+          <li>Playwright MCP incluso</li>
+        </ul>
+        <div class="foot"><span class="tag">7 plugins</span></div>
+      </article>
+
+      <article class="card lazy">
+        <span class="pattern">Padrão · hooks always-on</span>
+        <div class="alias">claude-lazy</div>
+        <div class="dir">~/.claude-profiles/ponytail</div>
+        <p class="role">Código mínimo, anti-over-engineering.</p>
+        <ul>
+          <li>Plugin <code>DietrichGebert/ponytail</code></li>
+          <li>Disciplina injetada via hooks</li>
+          <li>Sem regra duplicada no CLAUDE.md</li>
+          <li>Boot: <code>PONYTAIL_DEFAULT_MODE=full</code></li>
+        </ul>
+        <div class="foot"><span class="tag">always-on</span></div>
+      </article>
+
+    </div>
+  </section>
+
+  <section aria-labelledby="ver-h">
+    <h2 class="h2" id="ver-h"><span class="num">04</span> Exemplo vivo: o profile devorq</h2>
+    <p class="sub">Cada exemplo é mantido. Quando o orquestrador foi renomeado e evoluiu dois releases, o profile foi re-absorvido do repo local e revalidado — o mesmo ciclo que os seus profiles terão.</p>
+    <div class="verpanel">
+      <div class="timeline">
+        <div class="tl-step past">
+          <div class="tl-rail"><span class="tl-dot"></span><span class="tl-line"></span></div>
+          <div class="tl-ver">v3.8.5</div>
+          <div class="tl-name">snapshot anterior</div>
+          <div class="tl-meta">absorvido em 02–03/jul</div>
+        </div>
+        <div class="tl-step past">
+          <div class="tl-rail"><span class="tl-dot"></span><span class="tl-line"></span></div>
+          <div class="tl-ver">v4.0.0</div>
+          <div class="tl-name">Elite Hardening</div>
+          <div class="tl-meta">release intermediário</div>
+        </div>
+        <div class="tl-step now">
+          <div class="tl-rail"><span class="tl-dot"></span><span class="tl-line"></span></div>
+          <div class="tl-ver">v4.1.0</div>
+          <div class="tl-name">Loop Engineering</div>
+          <div class="tl-meta">HEAD 182cc93 · reabsorvido</div>
+        </div>
+      </div>
+      <div class="verfoot">
+        <span class="rename">repo renomeado&nbsp; <b class="strike">devorq_v3</b> <span class="arw">→</span> <b>devorq</b></span>
+        <span class="stats">
+          <span class="stat ok">29 ✓ ok</span>
+          <span class="stat">0 ! warn</span>
+          <span class="stat">0 ✕ fail</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="pin-h">
+    <h2 class="h2" id="pin-h"><span class="num">05</span> Referências pinadas</h2>
+    <p class="sub">Lockfile manual (<code>VERSIONS.md</code>) — o "conhecido-bom" que o <code>setup.sh</code> monta. Snapshot dos marketplaces; bump é deliberado, não live.</p>
+    <div class="pins">
+      <div class="pins-head"><span>VERSIONS.md — lockfile manual</span><span>snapshot 2026-07-03 · devorq re-sync 07-15</span></div>
+      <div class="pins-scroll">
+        <table class="pintbl">
+          <thead><tr><th>Componente</th><th>Versão / commit</th><th>Fonte</th></tr></thead>
+          <tbody>
+            <tr><td class="comp"><span class="live">DEVORQ CLI</span></td><td class="v">v4.1.0 · 182cc93</td><td class="v">nandinhos/devorq</td></tr>
+            <tr><td class="comp">Playwright MCP</td><td class="v">0.0.77</td><td class="v">@playwright/mcp</td></tr>
+            <tr><td class="comp">mwguerra-marketplace</td><td class="v">965b237</td><td class="v">mwguerra/claude-code-plugins</td></tr>
+            <tr><td class="comp">mwguerra-plugins</td><td class="v">7bab128</td><td class="v">mwguerra/plugins</td></tr>
+            <tr><td class="comp">ponytail</td><td class="v">c4d1925</td><td class="v">DietrichGebert/ponytail</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="lock">● repo público</span>
+    <a href="https://github.com/nandinhos/claude-profiles">github.com/nandinhos/claude-profiles</a>
+    <span>· mecanismo: CLAUDE_CONFIG_DIR · smoke test: verify.sh</span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('ttoggle');
+    function isDark() {
+      var t = root.getAttribute('data-theme');
+      if (t) return t === 'dark';
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    function paint() { btn.textContent = isDark() ? '☀' : '☾'; }
+    btn.addEventListener('click', function () {
+      root.setAttribute('data-theme', isDark() ? 'light' : 'dark');
+      paint();
+    });
+    paint();
+  })();
+</script>
+</body>
+</html>
