@@ -1,0 +1,34 @@
+# Segredos — os profiles (e suas credenciais) vivem em ~/.claude-profiles/, fora deste repo.
+# Estas linhas são defensivas, caso algo seja copiado para cá por engano.
+.credentials.json
+*.credentials.json
+*.local
+*.local.json
+settings.local.json
+
+# .env com dados do HUB/VPS (NUNCA versionar). Só o .env.example (sanitizado) é commitado.
+.env
+.env.*
+!.env.example
+
+# Runtime / temporários
+*.log
+*.tmp
+.DS_Store
+
+# Os diretórios de profile NÃO devem ser versionados aqui (são gerados pelo setup.sh)
+.claude-profiles/
+
+# DEVORQ — espelha o .gitignore do devorq_v3: versiona rules/ + foundation docs
+# (5w2h/premissas/riscos/requisitos/restricoes); ignora o estado efêmero de runtime
+# (regenerado por devorq init/flow — não versionar).
+.devorq/state/context.json
+.devorq/state/session.json
+.devorq/state/handoff.json
+.devorq/state/last_test.json
+.devorq/state/pre_tool_snapshot.json
+.devorq/state/logs/
+.devorq/state/sessions/
+.devorq/state/unify/
+.devorq/state/lessons/downloaded/
+.devorq/.devorq/
