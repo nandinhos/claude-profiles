@@ -1,0 +1,33 @@
+{
+  "project": "claude-profiles",
+  "created_at": "2026-07-03T04:27:55Z",
+  "updated_at": "2026-07-03T04:27:55Z",
+  "what": {
+    "description": "",
+    "examples": []
+  },
+  "why": {
+    "description": "",
+    "business_value": ""
+  },
+  "who": {
+    "description": "",
+    "stakeholders": []
+  },
+  "when": {
+    "description": "",
+    "timeline": ""
+  },
+  "where": {
+    "description": "",
+    "context": ""
+  },
+  "how": {
+    "description": "",
+    "approach": ""
+  },
+  "how_much": {
+    "description": "",
+    "estimated_effort": ""
+  }
+}
